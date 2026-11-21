@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>Mesa de tarot</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: una columna sobre el paño. Pregunta y estructura arriba, la mesa con sus posiciones al centro, el mazo extendido debajo, y al final las tiradas guardadas. */
+:root {
+  --table: #dfe6e3;
+  --table-line: #c9d3cf;
+  --panel: #eef2f0;
+  --ink: #1c2230;
+  --muted: #586172;
+  --card: #fbfaf5;
+  --frame: #191919;
+  --blue: #22408c;
+  --sky: #86c3e3;
+  --red: #c4372c;
+  --yellow: #e5b522;
+  --green: #3d8a4c;
+  --focus: #22408c;
+  --display: "IM Fell English SC", "Palatino Linotype", Georgia, serif;
+  --serif: "IM Fell English", "Palatino Linotype", Georgia, serif;
+  --body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --table: #121a2b; --table-line: #22304a; --panel: #18223a; --ink: #e8ebf2; --muted: #9ba5b8; --focus: #86c3e3; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --table: #121a2b; --table-line: #22304a; --panel: #18223a; --ink: #e8ebf2; --muted: #9ba5b8; --focus: #86c3e3; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--table);
+  background-image: repeating-linear-gradient(45deg, transparent 0 14px, var(--table-line) 14px 15px), repeating-linear-gradient(-45deg, transparent 0 14px, var(--table-line) 14px 15px);
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+main { max-width: 820px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 26px; }
+main > * { min-width: 0; }
+header { display: grid; gap: 4px; }
+.eyebrow { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(34px, 7vw, 50px); line-height: 1.05; margin: 0; }
+h2 { font-family: var(--display); font-weight: 400; font-size: 24px; margin: 0; }
+.sub { color: var(--muted); margin: 0; font-size: 15px; }
+
+.preparar { display: grid; gap: 14px; }
+label.q { display: grid; gap: 4px; font-size: 14px; color: var(--muted); }
+#pregunta, #preguntaExtra {
+  font-family: var(--serif); font-style: italic; font-size: 19px; color: var(--ink);
+  background: transparent; border: 0; border-bottom: 1px solid var(--muted); padding: 4px 0; width: 100%; resize: vertical;
+}
+#pregunta:focus, #preguntaExtra:focus { outline: none; border-bottom: 2px solid var(--focus); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; }
+.chips legend { font-size: 14px; color: var(--muted); margin-bottom: 6px; padding: 0; }
+.chips label { cursor: pointer; }
+.chips input { position: absolute; opacity: 0; pointer-events: none; }
+.chips span { display: inline-block; padding: 7px 13px; border-radius: 999px; border: 1.5px solid var(--muted); font-size: 15px; }
+.chips input:checked + span { background: var(--ink); color: var(--table); border-color: var(--ink); }
+.chips input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
+.chips input:disabled + span { opacity: .45; cursor: default; }
+.libre { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--muted); }
+#libreN { width: 64px; font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--muted); border-radius: 6px; padding: 4px 6px; }
+.aviso { font-size: 14px; color: var(--muted); margin: 0; }
+
+/* La mesa */
+.mesa { display: grid; grid-template-columns: repeat(auto-fit, minmax(58px, 100px)); justify-content: center; gap: 12px 10px; padding: 18px 8px; border-radius: 10px; border: 1px solid var(--table-line); background: color-mix(in srgb, var(--panel) 70%, transparent); }
+.pos { display: grid; gap: 6px; min-width: 0; text-align: center; }
+.pos .lbl { font-size: 13px; color: var(--muted); line-height: 1.2; min-height: 2.4em; display: grid; align-content: end; overflow-wrap: anywhere; }
+.pos.siguiente .lbl { color: var(--ink); font-weight: 700; }
+.pos .nm2 { font-size: 13px; line-height: 1.2; min-height: 2.4em; overflow-wrap: anywhere; }
+.sc { position: relative; width: 100%; aspect-ratio: 7 / 12; perspective: 600px; border: 0; padding: 0; background: none; cursor: default; }
+.sc.puede { cursor: pointer; }
+.sc .vacio { position: absolute; inset: 0; border: 1.5px dashed var(--muted); border-radius: 6px; display: grid; place-items: center; font-family: var(--display); font-size: 22px; color: var(--muted); }
+.pos.siguiente .vacio { border-color: var(--ink); color: var(--ink); border-style: solid; }
+.giro { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.3,.7,.2,1); }
+.giro.vuelta { transform: rotateY(180deg); }
+.lado { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 6px; border: 1.5px solid var(--frame); }
+.dorso {
+  background-color: var(--card);
+  background-image:
+    radial-gradient(circle at 50% 50%, var(--red) 0 8px, transparent 9px),
+    repeating-linear-gradient(45deg, var(--blue) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(-45deg, var(--blue) 0 2px, transparent 2px 9px);
+  box-shadow: inset 0 0 0 4px var(--card), inset 0 0 0 5px var(--frame), 2px 2px 0 rgba(0,0,0,.2);
+}
+.cara { transform: rotateY(180deg); background: var(--card); color: #191919; padding: 4px; display: grid; grid-template-rows: auto 1fr auto; gap: 3px; box-shadow: 2px 2px 0 rgba(0,0,0,.2); }
+.cara .n { font-family: var(--display); font-size: clamp(10px, 2.6vw, 14px); text-align: center; border: 1px solid var(--frame); line-height: 1.3; }
+.cara .c { display: grid; place-items: center; border: 1px solid var(--frame); padding: 2px; font-family: var(--display); font-size: clamp(10px, 2.4vw, 14px); line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
+.cara .f { font-family: var(--display); font-size: clamp(7px, 1.7vw, 10px); text-align: center; border: 1px solid var(--frame); line-height: 1.4; overflow-wrap: anywhere; }
+
+.ctrl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button.b {
+  font-family: var(--body); font-weight: 700; font-size: 16px; padding: 10px 17px; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid var(--ink); background: transparent; color: var(--ink);
+}
+button.b.main { background: var(--red); border-color: var(--red); color: #fff; }
+button.b:disabled { opacity: .4; cursor: default; }
+button:focus-visible, .carta:focus-visible, .sc:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.estado { font-size: 15px; color: var(--muted); min-height: 1.5em; margin: 0; }
+
+.paño { overflow-x: auto; overflow-y: hidden; padding: 30px 12px 18px; border-radius: 10px; border: 1px solid var(--table-line); cursor: grab; scrollbar-width: thin; touch-action: pan-x; }
+.paño.arrastrando { cursor: grabbing; }
+.fila { display: flex; width: max-content; padding-right: 12px; }
+.carta {
+  flex: 0 0 auto; width: 62px; height: 106px; margin-left: -26px; border-radius: 6px; border: 1.5px solid var(--frame);
+  background-color: var(--card);
+  background-image:
+    radial-gradient(circle at 50% 50%, var(--red) 0 8px, transparent 9px),
+    repeating-linear-gradient(45deg, var(--blue) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(-45deg, var(--blue) 0 2px, transparent 2px 9px);
+  box-shadow: inset 0 0 0 4px var(--card), inset 0 0 0 5px var(--frame), 2px 2px 0 rgba(0,0,0,.2);
+  cursor: pointer; padding: 0; transition: transform .25s ease, margin .35s ease;
+}
+.carta:first-child { margin-left: 0; }
+.carta:hover { transform: translateY(-6px); }
+.carta.elegida { transform: translateY(-24px); box-shadow: inset 0 0 0 4px var(--card), inset 0 0 0 5px var(--frame), 0 0 0 3px var(--yellow), 2px 8px 10px rgba(0,0,0,.25); }
+.fila.juntar .carta { margin-left: -60px; }
+.fila.juntar .carta:first-child { margin-left: 0; }
+.fila.cerrado .carta { cursor: default; opacity: .35; transform: none; }
+.ayuda { font-size: 14px; color: var(--muted); margin: 0; }
+
+.extra { display: grid; gap: 10px; padding: 14px; border-radius: 10px; border: 1px solid var(--table-line); background: var(--panel); }
+.lectura { display: grid; gap: 12px; }
+.lectura ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.lectura li { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 4px 14px; padding-bottom: 10px; border-bottom: 1px solid var(--table-line); }
+.lectura .p { font-size: 14px; color: var(--muted); }
+.lectura .t { font-family: var(--display); font-size: 20px; line-height: 1.2; }
+.lectura .k { grid-column: 2; font-family: var(--serif); font-style: italic; color: var(--muted); }
+.lectura .pq { grid-column: 1 / -1; font-size: 14px; color: var(--muted); }
+.confirmar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 15px; }
+
+.historial { display: grid; gap: 10px; }
+.historial ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.historial li { padding: 12px 14px; border-radius: 8px; background: var(--panel); display: grid; gap: 2px; }
+.historial .fecha { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.historial .hq { font-family: var(--serif); font-style: italic; }
+.historial .hc { font-size: 15px; }
+
+@media (max-width: 520px) {
+  .lectura li { grid-template-columns: 1fr; }
+  .lectura .k { grid-column: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .carta, .giro { transition: none; }
+}
+</style>
+
+<main>
+  <header>
+    <span class="eyebrow">Tarot de Marsella · arcanos mayores</span>
+    <h1>Mesa de tarot</h1>
+    <p class="sub">Escribe la pregunta, elige cómo poner las cartas y sácalas tú del mazo.</p>
+  </header>
+
+  <section class="preparar" aria-label="Preparar la tirada">
+    <label class="q" for="pregunta">Pregunta
+      <textarea id="pregunta" rows="2" placeholder="¿Qué quieres preguntarle al tarot?"></textarea>
+    </label>
+    <fieldset class="chips" id="estructuras">
+      <legend>Cómo poner las cartas</legend>
+    </fieldset>
+    <div class="libre" id="libreBox" hidden>
+      <label for="libreN">Número de cartas</label>
+      <input id="libreN" type="number" min="1" max="7" value="4">
+    </div>
+    <p class="aviso" id="bloqueo" hidden>La estructura queda fija cuando pones la primera carta en la mesa.</p>
+  </section>
+
+  <section aria-label="La mesa" style="display:grid; gap:12px">
+    <div class="mesa" id="mesa"></div>
+    <div class="ctrl">
+      <button class="b" id="barajar" type="button">Barajar</button>
+      <button class="b main" id="poner" type="button" disabled>Poner esta carta</button>
+      <button class="b main" id="voltearTodas" type="button" hidden>Voltear todas</button>
+    </div>
+    <p class="estado" id="estado" aria-live="polite"></p>
+    <div class="paño" id="paño"><div class="fila" id="fila"></div></div>
+    <p class="ayuda">Desliza el mazo, toca una carta para levantarla y tócala otra vez (o usa «Poner esta carta») para llevarla al siguiente lugar de la mesa. Cuando la mesa esté llena, toca cada carta para voltearla.</p>
+  </section>
+
+  <section class="extra" id="extraBox" hidden aria-label="Carta extra">
+    <h2>Una carta más</h2>
+    <p class="sub">Para aclarar algo o ver cómo se supera un bloqueo, saca otra carta del mazo que queda.</p>
+    <label class="q" for="preguntaExtra">Pregunta de esta carta (opcional)
+      <input id="preguntaExtra" type="text" placeholder="¿Qué hace falta para…?">
+    </label>
+    <div class="ctrl"><button class="b" id="pedirExtra" type="button">Sacar una carta más</button></div>
+  </section>
+
+  <section class="lectura" id="lectura" hidden aria-label="Las cartas de la tirada">
+    <h2>La tirada</h2>
+    <ol id="lista"></ol>
+    <div class="ctrl">
+      <button class="b" id="copiar" type="button">Copiar la tirada</button>
+      <button class="b" id="nueva" type="button">Nueva tirada</button>
+    </div>
+    <p class="estado" id="guardado" aria-live="polite"></p>
+  </section>
+
+  <div class="confirmar" id="confirmar" hidden>
+    <span>Esta tirada no está terminada. ¿La descartas?</span>
+    <button class="b" id="confirmarSi" type="button">Sí, descartar</button>
+    <button class="b" id="confirmarNo" type="button">No</button>
+  </div>
+  <div class="ctrl" id="nuevaSola" hidden><button class="b" id="nueva2" type="button">Nueva tirada</button></div>
+
+  <section class="historial" id="historial" aria-label="Tiradas guardadas">
+    <h2>Tiradas guardadas</h2>
+    <p class="sub" id="histEstado">Cuando voltees todas las cartas, la tirada se guarda aquí.</p>
+    <ul id="histLista"></ul>
+  </section>
+</main>
+
+<script>
+(function () {
+  const MAZO = [
+    { id: 0,  num: "",       es: "El Loco",                fr: "LE MAT",             kw: "Energía libre, impulso, viaje sin destino fijo." },
+    { id: 1,  num: "I",      es: "El Mago",                fr: "LE BATELEUR",        kw: "Comienzo, habilidad, elegir entre las posibilidades que hay en la mesa." },
+    { id: 2,  num: "II",     es: "La Papisa",              fr: "LA PAPESSE",         kw: "Acumulación, silencio, gestación, un saber que se guarda." },
+    { id: 3,  num: "III",    es: "La Emperatriz",          fr: "L'IMPERATRICE",      kw: "Estallido creativo, deseo, fecundidad." },
+    { id: 4,  num: "IIII",   es: "El Emperador",           fr: "L'EMPEREUR",         kw: "Estabilidad, estructura, sostén, responsabilidad." },
+    { id: 5,  num: "V",      es: "El Papa",                fr: "LE PAPE",            kw: "Puente, enseñanza, comunicación, transmitir." },
+    { id: 6,  num: "VI",     es: "El Enamorado",           fr: "L'AMOUREUX",         kw: "Vínculo, elección, el placer de estar con otros." },
+    { id: 7,  num: "VII",    es: "El Carro",               fr: "LE CHARIOT",         kw: "Acción en el mundo, avanzar, conquistar." },
+    { id: 8,  num: "VIII",   es: "La Justicia",            fr: "LA JUSTICE",         kw: "Equilibrio, darle a cada cosa lo que merece, decidir." },
+    { id: 9,  num: "VIIII",  es: "El Ermitaño",            fr: "L'HERMITE",          kw: "Crisis, sabiduría, soledad, desprendimiento." },
+    { id: 10, num: "X",      es: "La Rueda de la Fortuna", fr: "LA ROUE DE FORTUNE", kw: "Fin de un ciclo, cambio, ayuda que llega de afuera." },
+    { id: 11, num: "XI",     es: "La Fuerza",              fr: "LA FORCE",           kw: "Energía instintiva acompañada, un comienzo desde lo profundo." },
+    { id: 12, num: "XII",    es: "El Colgado",             fr: "LE PENDU",           kw: "Pausa, entrega, mirar desde otro punto de vista." },
+    { id: 13, num: "XIII",   es: "El Arcano sin nombre",   fr: " ",             kw: "Transformación, limpiar lo que ya no sirve." },
+    { id: 14, num: "XIIII",  es: "La Templanza",           fr: "TEMPERANCE",         kw: "Circulación, cuidado, sanar, comunicación entre dos." },
+    { id: 15, num: "XV",     es: "El Diablo",              fr: "LE DIABLE",          kw: "Pasión, creatividad desde la sombra, lazos, tentación." },
+    { id: 16, num: "XVI",    es: "La Casa Dios",           fr: "LA MAISON DIEU",     kw: "Apertura, liberación, celebración, salir de lo cerrado." },
+    { id: 17, num: "XVII",   es: "La Estrella",            fr: "L'ETOILE",           kw: "Dar y recibir, encontrar el propio lugar, generosidad." },
+    { id: 18, num: "XVIII",  es: "La Luna",                fr: "LA LUNE",            kw: "Intuición, lo receptivo, lo inconsciente, la noche." },
+    { id: 19, num: "XVIIII", es: "El Sol",                 fr: "LE SOLEIL",          kw: "Amor que construye, vida nueva, fraternidad." },
+    { id: 20, num: "XX",     es: "El Juicio",              fr: "LE JUGEMENT",        kw: "Llamado, despertar, deseo irresistible de ser." },
+    { id: 21, num: "XXI",    es: "El Mundo",               fr: "LE MONDE",           kw: "Realización, plenitud, totalidad." }
+  ];
+  const carta = id => MAZO[id];
+  const nombre = c => (c.num ? c.num + " · " : "") + c.es;
+
+  // orden: lugar en la mesa de izquierda a derecha (las cartas se sacan en el orden de la lista)
+  const ESTRUCTURAS = [
+    { key: "una",     nombre: "Una carta",                       pos: ["La carta"] },
+    { key: "tres",    nombre: "Tres cartas",                     pos: ["Primera", "Segunda", "Tercera"] },
+    { key: "tiempo",  nombre: "Pasado, presente, futuro",        pos: ["Pasado", "Presente", "Futuro"] },
+    { key: "proceso", nombre: "Comienzo, desarrollo, resultado", pos: ["Comienzo", "Desarrollo", "Resultado"] },
+    { key: "cinco",   nombre: "Cinco: centro, dificultad y beneficio", pos: ["Pasado", "Presente", "Futuro", "Dificultad", "Beneficio"], orden: [1, 2, 3, 0, 4] },
+    { key: "libre",   nombre: "Libre",                           pos: null }
+  ];
+  const CLAVE = "mesa-tarot-actual";
+  const CLAVE_HIST = "mesa-tarot-historial";
+  function leerHistLocal() {
+    try { const o = JSON.parse(localStorage.getItem(CLAVE_HIST) || "[]"); return Array.isArray(o) ? o : []; } catch (e) { return []; }
+  }
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const $ = id => document.getElementById(id);
+
+  let db = null;
+  let S = null;            // estado de la tirada
+  let elegida = -1;        // índice en S.mazo
+  let pidiendoExtra = false;
+  let colaGuardar = Promise.resolve();
+
+  function azar(max) {
+    const lim = Math.floor(4294967296 / max) * max;
+    const buf = new Uint32Array(1);
+    let x;
+    do { crypto.getRandomValues(buf); x = buf[0]; } while (x >= lim);
+    return x % max;
+  }
+  function mezclar(a) {
+    for (let i = a.length - 1; i > 0; i--) { const j = azar(i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+  function nuevoId() {
+    const d = new Date();
+    const p = n => String(n).padStart(2, "0");
+    return "t-" + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + "-" + azar(46656).toString(36);
+  }
+  function estructura() { return ESTRUCTURAS.find(e => e.key === S.estructura) || ESTRUCTURAS[1]; }
+  function posiciones() {
+    const e = estructura();
+    if (e.pos) return e.pos;
+    const n = Math.min(7, Math.max(1, parseInt(S.libreN, 10) || 1));
+    return Array.from({ length: n }, (_, i) => "Carta " + (i + 1));
+  }
+  function nuevaTirada(conservarPregunta) {
+    S = {
+      id: nuevoId(),
+      creada: new Date().toISOString(),
+      pregunta: conservarPregunta && S ? S.pregunta : "",
+      estructura: S ? S.estructura : "tres",
+      libreN: S ? S.libreN : 4,
+      mesa: [],
+      extras: [],
+      mazo: mezclar(MAZO.map(c => c.id)),
+      barajadas: 1,
+      guardada: false
+    };
+    ajustarMesa();
+  }
+  function ajustarMesa() {
+    const n = posiciones().length;
+    if (S.mesa.some(m => m.c !== null)) return;
+    S.mesa = Array.from({ length: n }, () => ({ c: null, v: false }));
+  }
+  const empezada = () => S.mesa.some(m => m.c !== null) || S.extras.length > 0;
+  const mesaLlena = () => S.mesa.every(m => m.c !== null);
+  const todasVolteadas = () => mesaLlena() && S.mesa.every(m => m.v) && S.extras.every(x => x.c !== null && x.v);
+  const extraPendiente = () => S.extras.some(x => x.c === null);
+
+  function guardarLocal() { try { localStorage.setItem(CLAVE, JSON.stringify(S)); } catch (e) {} }
+  function leerLocal() {
+    try {
+      const t = localStorage.getItem(CLAVE);
+      if (!t) return null;
+      const o = JSON.parse(t);
+      return o && Array.isArray(o.mesa) && Array.isArray(o.mazo) ? o : null;
+    } catch (e) { return null; }
+  }
+
+  // ---------- pintar ----------
+  function pintarEstructuras() {
+    const fs = $("estructuras");
+    fs.querySelectorAll("label").forEach(l => l.remove());
+    ESTRUCTURAS.forEach(e => {
+      const l = document.createElement("label");
+      const i = document.createElement("input");
+      i.type = "radio"; i.name = "estructura"; i.value = e.key; i.id = "est-" + e.key;
+      i.checked = S.estructura === e.key;
+      i.disabled = empezada();
+      i.addEventListener("change", () => { S.estructura = e.key; ajustarMesa(); pintar(); });
+      const s = document.createElement("span"); s.textContent = e.nombre;
+      l.append(i, s); fs.appendChild(l);
+    });
+  }
+  function caraHTML(c) {
+    return '<div class="lado cara"><div class="n">' + (c.num || "&nbsp;") + '</div><div class="c">' + c.es + '</div><div class="f">' + c.fr + '</div></div>';
+  }
+  function slot(label, item, orden, siguiente, num, onFlip) {
+    const d = document.createElement("div");
+    d.className = "pos" + (siguiente ? " siguiente" : "");
+    if (orden !== undefined) d.style.order = orden;
+    const l = document.createElement("div"); l.className = "lbl"; l.textContent = label; d.appendChild(l);
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "sc";
+    if (item.c === null) {
+      b.disabled = true;
+      b.innerHTML = '<div class="vacio">' + num + '</div>';
+      b.setAttribute("aria-label", label + ": vacío");
+    } else {
+      const c = carta(item.c);
+      b.innerHTML = '<div class="giro' + (item.v ? " vuelta" : "") + '"><div class="lado dorso"></div>' + caraHTML(c) + '</div>';
+      if (!item.v) {
+        b.classList.add("puede");
+        b.setAttribute("aria-label", label + ": carta boca abajo, toca para voltearla");
+        b.addEventListener("click", () => onFlip(b));
+      } else {
+        b.setAttribute("aria-label", label + ": " + nombre(c));
+      }
+    }
+    d.appendChild(b);
+    const nm = document.createElement("div"); nm.className = "nm2";
+    nm.textContent = item.c !== null && item.v ? carta(item.c).es : "";
+    d.appendChild(nm);
+    return d;
+  }
+  function voltearEn(b, item) {
+    item.v = true;
+    const g = b.querySelector(".giro");
+    if (g) g.classList.add("vuelta");
+    guardarLocal();
+    setTimeout(pintar, reduce ? 0 : 850);
+    if (todasVolteadas()) guardarRemoto();
+  }
+  function pintarMesa() {
+    const m = $("mesa"); m.innerHTML = "";
+    const pos = posiciones(); const e = estructura();
+    const sig = S.mesa.findIndex(x => x.c === null);
+    S.mesa.forEach((it, i) => {
+      m.appendChild(slot(pos[i], it, e.orden ? e.orden[i] : i, i === sig, i + 1, b => voltearEn(b, it)));
+    });
+    S.extras.forEach((it, k) => {
+      m.appendChild(slot("Extra " + (k + 1), it, 100 + k, it.c === null, "+", b => voltearEn(b, it)));
+    });
+  }
+  function pintarMazo() {
+    const f = $("fila"); f.innerHTML = "";
+    S.mazo.forEach((id, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "carta" + (i === elegida ? " elegida" : "");
+      b.setAttribute("aria-label", "Carta boca abajo, posición " + (i + 1) + " de " + S.mazo.length);
+      b.addEventListener("click", () => tocarCarta(i));
+      f.appendChild(b);
+    });
+    f.classList.toggle("cerrado", !puedeSacar());
+  }
+  function puedeSacar() { return !mesaLlena() || extraPendiente(); }
+  function textoEstado() {
+    let t;
+    if (!mesaLlena()) {
+      const falta = S.mesa.filter(m => m.c === null).length;
+      t = "Faltan " + falta + (falta === 1 ? " carta" : " cartas") + " por poner. Mazo: " + S.mazo.length + " cartas, barajado " + S.barajadas + (S.barajadas === 1 ? " vez." : " veces.");
+      if (elegida >= 0) t += " Levantaste la posición " + (elegida + 1) + ".";
+    } else if (extraPendiente()) {
+      t = "Elige la carta extra del mazo." + (elegida >= 0 ? " Levantaste la posición " + (elegida + 1) + "." : "");
+    } else if (!todasVolteadas()) {
+      t = "La mesa está lista. Toca cada carta para voltearla, o voltéalas todas.";
+    } else {
+      t = "";
+    }
+    $("estado").textContent = t;
+  }
+  function pintarLectura() {
+    const visibles = S.mesa.some(m => m.v) || S.extras.some(x => x.v);
+    $("lectura").hidden = !visibles;
+    const ol = $("lista"); ol.innerHTML = "";
+    const pos = posiciones();
+    const filas = [];
+    S.mesa.forEach((m, i) => { if (m.c !== null && m.v) filas.push({ p: pos[i], c: carta(m.c) }); });
+    S.extras.forEach((x, k) => { if (x.c !== null && x.v) filas.push({ p: "Extra " + (k + 1), c: carta(x.c), q: x.q }); });
+    filas.forEach(f => {
+      const li = document.createElement("li");
+      const p = document.createElement("span"); p.className = "p"; p.textContent = f.p;
+      const t = document.createElement("span"); t.className = "t"; t.textContent = nombre(f.c);
+      const k = document.createElement("span"); k.className = "k"; k.textContent = f.c.kw;
+      li.append(p, t, k);
+      if (f.q) { const q = document.createElement("span"); q.className = "pq"; q.textContent = "Pregunta: " + f.q; li.appendChild(q); }
+      ol.appendChild(li);
+    });
+  }
+  function pintar() {
+    $("pregunta").value !== S.pregunta && ($("pregunta").value = S.pregunta);
+    pintarEstructuras();
+    $("libreBox").hidden = S.estructura !== "libre";
+    $("libreN").value = S.libreN;
+    $("libreN").disabled = empezada();
+    $("bloqueo").hidden = !empezada();
+    pintarMesa();
+    pintarMazo();
+    const listas = mesaLlena() && !todasVolteadas() && !extraPendiente();
+    $("voltearTodas").hidden = !listas;
+    $("poner").hidden = !puedeSacar();
+    $("poner").disabled = elegida < 0;
+    $("barajar").disabled = !puedeSacar();
+    $("extraBox").hidden = !(todasVolteadas() && !pidiendoExtra);
+    $("nuevaSola").hidden = !empezada() || !$("lectura").hidden || !$("confirmar").hidden;
+    textoEstado();
+    pintarLectura();
+    guardarLocal();
+  }
+
+  // ---------- acciones ----------
+  let arrastro = false;
+  function tocarCarta(i) {
+    if (arrastro || !puedeSacar()) return;
+    if (elegida === i) { poner(); return; }
+    elegida = i;
+    [...$("fila").children].forEach((c, k) => c.classList.toggle("elegida", k === elegida));
+    $("poner").disabled = false;
+    textoEstado();
+  }
+  function poner() {
+    if (elegida < 0 || !puedeSacar()) return;
+    const id = S.mazo.splice(elegida, 1)[0];
+    elegida = -1;
+    const destino = !mesaLlena() ? S.mesa.find(m => m.c === null) : S.extras.find(x => x.c === null);
+    destino.c = id;
+    if (extraPendiente() === false) pidiendoExtra = false;
+    pintar();
+  }
+  function barajar() {
+    if (!puedeSacar()) return;
+    elegida = -1;
+    const f = $("fila");
+    f.classList.add("juntar");
+    $("barajar").disabled = true;
+    setTimeout(() => {
+      mezclar(S.mazo);
+      S.barajadas++;
+      pintarMazo();
+      f.classList.add("juntar");
+      requestAnimationFrame(() => requestAnimationFrame(() => { f.classList.remove("juntar"); pintar(); }));
+    }, reduce ? 0 : 380);
+  }
+  function voltearTodas() {
+    const pend = [...S.mesa, ...S.extras].filter(m => m.c !== null && !m.v);
+    const botones = [...$("mesa").querySelectorAll(".sc.puede")];
+    pend.forEach(m => { m.v = true; });
+    botones.forEach((b, k) => setTimeout(() => { const g = b.querySelector(".giro"); if (g) g.classList.add("vuelta"); }, reduce ? 0 : k * 260));
+    guardarLocal();
+    setTimeout(pintar, reduce ? 0 : botones.length * 260 + 850);
+    if (todasVolteadas()) guardarRemoto();
+  }
+  function pedirExtra() {
+    S.extras.push({ c: null, v: false, q: $("preguntaExtra").value.trim() });
+    $("preguntaExtra").value = "";
+    pidiendoExtra = true;
+    S.guardada = false;
+    pintar();
+    $("paño").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+  }
+  function textoTirada() {
+    const pos = posiciones();
+    const f = new Date(S.creada).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "long", timeStyle: "short" });
+    let t = "Tirada del " + f + " · " + estructura().nombre + (S.estructura === "libre" ? " (" + pos.length + ")" : "") + "\n";
+    if (S.pregunta.trim()) t += "Pregunta: " + S.pregunta.trim() + "\n";
+    S.mesa.forEach((m, i) => { if (m.c !== null && m.v) t += pos[i] + ": " + nombre(carta(m.c)) + "\n"; });
+    S.extras.forEach((x, k) => { if (x.c !== null && x.v) t += "Extra " + (k + 1) + (x.q ? " (" + x.q + ")" : "") + ": " + nombre(carta(x.c)) + "\n"; });
+    return t.trim();
+  }
+  function copiar() {
+    const t = textoTirada();
+    const ok = () => { $("guardado").textContent = "Tirada copiada."; };
+    const mal = () => { $("guardado").textContent = "No se pudo copiar. Selecciona la lista de cartas y cópiala a mano."; };
+    try { navigator.clipboard.writeText(t).then(ok, mal); } catch (e) { mal(); }
+  }
+  function pedirNueva() {
+    if (!empezada() || (todasVolteadas() && S.guardada)) { reiniciar(); return; }
+    $("confirmar").hidden = false;
+    $("nuevaSola").hidden = true;
+  }
+  function reiniciar() {
+    $("confirmar").hidden = true;
+    elegida = -1; pidiendoExtra = false;
+    nuevaTirada(false);
+    $("guardado").textContent = "";
+    pintar();
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+  }
+
+  // ---------- guardar en la base ----------
+  function documento() {
+    const pos = posiciones();
+    return {
+      creada: S.creada,
+      pregunta: S.pregunta.trim(),
+      estructura: estructura().nombre,
+      barajadas: S.barajadas,
+      cartas: S.mesa.map((m, i) => ({ posicion: pos[i], id: m.c, numero: carta(m.c).num, nombre: carta(m.c).es })),
+      extras: S.extras.filter(x => x.c !== null && x.v).map((x, k) => ({ posicion: "Extra " + (k + 1), pregunta: x.q || "", id: x.c, numero: carta(x.c).num, nombre: carta(x.c).es }))
+    };
+  }
+  function guardarRemoto() {
+    if (!db) {
+      const lista = leerHistLocal().filter(o => o._id !== S.id);
+      lista.unshift(Object.assign({ _id: S.id }, documento()));
+      try {
+        localStorage.setItem(CLAVE_HIST, JSON.stringify(lista.slice(0, 200)));
+        S.guardada = true; guardarLocal();
+        $("guardado").textContent = "Guardada en este navegador.";
+      } catch (e) {
+        $("guardado").textContent = "Este navegador no deja guardar. Copia la tirada para no perderla.";
+      }
+      pintarHistorial(leerHistLocal());
+      return;
+    }
+    const doc = documento();
+    const id = S.id;
+    $("guardado").textContent = "Guardando…";
+    colaGuardar = colaGuardar.then(() => db.collection("tiradas").doc(id).set(doc)).then(() => {
+      if (S.id === id) { S.guardada = true; guardarLocal(); $("guardado").textContent = "Guardada en tus tiradas."; }
+    }, e => {
+      $("guardado").textContent = e && e.code === "quota_exceeded" ? "No se pudo guardar: la base está llena." : "No se pudo guardar. Copia la tirada para no perderla.";
+    });
+  }
+  function pintarHistorial(docs) {
+    const ul = $("histLista"); ul.innerHTML = "";
+    $("histEstado").textContent = docs.length ? "" : "Todavía no hay tiradas guardadas. Cuando voltees todas las cartas, la tirada se guarda aquí.";
+    docs.forEach(d => {
+      const o = typeof d.data === "function" ? d.data() : d; if (!o) return;
+      const li = document.createElement("li");
+      const f = document.createElement("span"); f.className = "fecha";
+      try { f.textContent = new Date(o.creada).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "medium", timeStyle: "short" }) + " · " + (o.estructura || ""); } catch (e) { f.textContent = o.estructura || ""; }
+      li.appendChild(f);
+      if (o.pregunta) { const q = document.createElement("span"); q.className = "hq"; q.textContent = o.pregunta; li.appendChild(q); }
+      const c = document.createElement("span"); c.className = "hc";
+      const todas = [...(o.cartas || []), ...(o.extras || [])];
+      c.textContent = todas.map(x => (x.numero ? x.numero + " " : "") + x.nombre).join(" → ");
+      li.appendChild(c);
+      ul.appendChild(li);
+    });
+  }
+  async function conectar() {
+    try { db = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch (e) { db = null; }
+    if (!db) {
+      pintarHistorial(leerHistLocal());
+      if (!leerHistLocal().length) $("histEstado").textContent = "Todavía no hay tiradas guardadas en este navegador. Cuando voltees todas las cartas, la tirada se guarda aquí.";
+      if (todasVolteadas() && !S.guardada) guardarRemoto();
+      return;
+    }
+    if (todasVolteadas() && !S.guardada) guardarRemoto();
+    $("histEstado").textContent = "Cargando tus tiradas…";
+    let timer = setTimeout(() => { $("histEstado").textContent = "No se pudieron cargar las tiradas guardadas todavía."; }, 10000);
+    db.collection("tiradas").orderBy("creada", "desc").limit(30).onSnapshot(snap => {
+      if (!snap.metadata.fromCache && timer) { clearTimeout(timer); timer = null; }
+      pintarHistorial(snap.docs);
+    }, () => {
+      if (timer) { clearTimeout(timer); timer = null; }
+      $("histEstado").textContent = "No se pudieron cargar las tiradas guardadas.";
+    });
+  }
+
+  // ---------- arrastrar el mazo con el ratón ----------
+  let abajo = false, x0 = 0, s0 = 0;
+  const pano = $("paño");
+  pano.addEventListener("pointerdown", e => { if (e.pointerType !== "mouse") return; abajo = true; arrastro = false; x0 = e.clientX; s0 = pano.scrollLeft; });
+  window.addEventListener("pointermove", e => {
+    if (!abajo) return;
+    const dx = e.clientX - x0;
+    if (Math.abs(dx) > 5) { arrastro = true; pano.classList.add("arrastrando"); }
+    if (arrastro) pano.scrollLeft = s0 - dx;
+  });
+  window.addEventListener("pointerup", () => { if (!abajo) return; abajo = false; pano.classList.remove("arrastrando"); setTimeout(() => { arrastro = false; }, 0); });
+
+  $("pregunta").addEventListener("input", e => { S.pregunta = e.target.value; guardarLocal(); });
+  $("libreN").addEventListener("change", e => {
+    const n = Math.min(7, Math.max(1, parseInt(e.target.value, 10) || 1));
+    S.libreN = n; ajustarMesa(); pintar();
+  });
+  $("barajar").addEventListener("click", barajar);
+  $("poner").addEventListener("click", poner);
+  $("voltearTodas").addEventListener("click", voltearTodas);
+  $("pedirExtra").addEventListener("click", pedirExtra);
+  $("copiar").addEventListener("click", copiar);
+  $("nueva").addEventListener("click", pedirNueva);
+  $("nueva2").addEventListener("click", pedirNueva);
+  $("confirmarSi").addEventListener("click", reiniciar);
+  $("confirmarNo").addEventListener("click", () => { $("confirmar").hidden = true; pintar(); });
+
+  const previo = leerLocal();
+  if (previo) { S = previo; pidiendoExtra = extraPendiente(); } else { nuevaTirada(false); }
+  pintar();
+  conectar();
+})();
+</script>
+
+</body>
+</html>
